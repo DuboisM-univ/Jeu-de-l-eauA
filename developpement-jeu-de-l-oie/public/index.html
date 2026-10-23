@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#24452e">
+<meta name="description" content="Le Jeu de l’Oie classique, jouable de 2 à 6 joueurs directement dans le navigateur.">
+<title>Le Jeu de l’Oie</title>
+<style>
+/* =========================================================
+   1. THÈME & BASE
+   ========================================================= */
+:root{
+  --paper:#f5ecd7;
+  --paper-2:#ead9b5;
+  --ink:#3b2a1a;
+  --ink-soft:#6b5640;
+  --green:#24452e;
+  --green-2:#2f5d3a;
+  --red:#a8432a;
+  --gold:#c8962e;
+  --radius:14px;
+  --font-display: "Georgia", "Times New Roman", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(200,150,46,.18), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(47,93,58,.16), transparent 45%),
+    var(--paper);
+  line-height:1.5;
+}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--font-display);line-height:1.15;margin:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.screen{display:none;min-height:100dvh}
+.screen.active{display:block}
+
+/* Boutons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  border:0;border-radius:999px;padding:.7rem 1.3rem;cursor:pointer;
+  font-weight:700;letter-spacing:.01em;
+  transition:transform .12s ease, box-shadow .12s ease, background .2s, opacity .2s;
+}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn:not(:disabled):active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--red);color:#fff8ec;box-shadow:0 3px 0 #7a2f1d}
+.btn-primary:not(:disabled):hover{background:#b84d32}
+.btn-secondary{background:var(--green-2);color:#fff8ec;box-shadow:0 3px 0 #1a3322}
+.btn-secondary:not(:disabled):hover{background:#386d45}
+.btn-ghost{background:rgba(59,42,26,.07);color:var(--ink)}
+.btn-ghost:not(:disabled):hover{background:rgba(59,42,26,.13)}
+.btn-lg{padding:.95rem 1.8rem;font-size:1.1rem}
+.btn-sm{padding:.45rem .9rem;font-size:.9rem}
+.btn svg{width:1.1em;height:1.1em}
+
+/* =========================================================
+   2. ACCUEIL & CONFIGURATION
+   ========================================================= */
+.center-screen{display:flex;align-items:center;justify-content:center;padding:2rem 1rem;min-height:100dvh}
+.card{
+  background:#fffaf0;border-radius:24px;padding:2rem;
+  box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 20px 50px -20px rgba(59,42,26,.45);
+  border:1px solid rgba(59,42,26,.12);
+  width:100%;
+}
+.home-card{max-width:520px;text-align:center}
+.emblem{
+  width:120px;height:120px;margin:0 auto 1.25rem;border-radius:50%;
+  display:grid;place-items:center;color:#fff8ec;
+  background:radial-gradient(circle at 35% 30%, #3d7a4d, var(--green));
+  box-shadow:0 0 0 6px var(--paper), 0 0 0 9px var(--gold), 0 14px 30px -10px rgba(0,0,0,.5);
+}
+.emblem svg{width:64px;height:64px}
+.home-card h1{font-size:clamp(2.2rem,7vw,3.2rem);color:var(--green)}
+.home-card .tagline{color:var(--ink-soft);margin:.6rem 0 1.8rem}
+.home-actions{display:flex;flex-direction:column;gap:.75rem;align-items:stretch;max-width:320px;margin:0 auto}
+.resume-info{font-size:.85rem;color:var(--ink-soft);margin-top:-.3rem}
+
+.setup-card{max-width:640px}
+.setup-card h2{font-size:1.9rem;color:var(--green);margin-bottom:.3rem}
+.muted{color:var(--ink-soft)}
+.field-label{font-weight:700;display:block;margin:1.4rem 0 .6rem}
+.segmented{display:flex;gap:.5rem;flex-wrap:wrap}
+.segmented button{
+  width:3rem;height:3rem;border-radius:12px;border:2px solid rgba(59,42,26,.2);
+  background:#fff;font-weight:800;font-size:1.1rem;cursor:pointer;
+}
+.segmented button[aria-pressed="true"]{background:var(--green-2);color:#fff;border-color:var(--green-2)}
+.segmented button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.player-rows{display:flex;flex-direction:column;gap:.75rem}
+.player-row{
+  display:grid;grid-template-columns:auto 1fr;gap:.6rem 1rem;align-items:center;
+  padding:.8rem;border-radius:14px;background:var(--paper);border:1px solid rgba(59,42,26,.1);
+}
+.player-row .pawn-preview{width:2.2rem;height:2.2rem}
+.player-row input{
+  width:100%;padding:.6rem .8rem;border-radius:10px;border:1.5px solid rgba(59,42,26,.25);background:#fff;
+}
+.player-row input:focus{outline:none;border-color:var(--green-2);box-shadow:0 0 0 3px rgba(47,93,58,.2)}
+.swatches{grid-column:2;display:flex;gap:.45rem;flex-wrap:wrap}
+.swatch{
+  width:1.9rem;height:1.9rem;border-radius:50%;border:3px solid #fff;cursor:pointer;
+  box-shadow:0 0 0 1px rgba(59,42,26,.3);background:var(--c);
+}
+.swatch[aria-checked="true"]{box-shadow:0 0 0 3px var(--ink)}
+.swatch:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.setup-actions{display:flex;justify-content:space-between;gap:.75rem;margin-top:1.8rem;flex-wrap:wrap}
+
+/* =========================================================
+   3. ÉCRAN DE JEU
+   ========================================================= */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  padding:.75rem 1.25rem;background:var(--green);color:#fff8ec;
+  box-shadow:0 2px 0 var(--gold);
+}
+.topbar h1{font-size:1.4rem;display:flex;align-items:center;gap:.5rem}
+.topbar h1 svg{width:1.6rem;height:1.6rem}
+.topbar-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+.topbar .btn-ghost{background:rgba(255,248,236,.12);color:#fff8ec}
+.topbar .btn-ghost:not(:disabled):hover{background:rgba(255,248,236,.22)}
+
+.game-layout{
+  display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:1.25rem;
+  max-width:1320px;margin:0 auto;padding:1.25rem;
+}
+.board-wrap{display:flex;flex-direction:column;align-items:center;gap:1rem;min-width:0}
+
+/* Plateau : grille 8x8 en spirale (case 0 = départ, 63 = arrivée au centre) */
+.board-frame{
+  position:relative;container-type:inline-size;
+  width:min(100%, calc(100dvh - 120px));min-width:280px;aspect-ratio:1;
+}
+.board{
+  position:relative;container-type:inline-size;
+  width:100%;aspect-ratio:1;min-height:0;
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));gap:.5cqi;
+  padding:1.6cqi;border-radius:3cqi;
+  background:linear-gradient(145deg,#2f5d3a,#1d3825);
+  box-shadow:0 0 0 .8cqi var(--gold), 0 0 0 1.3cqi #8b6420, 0 25px 50px -20px rgba(0,0,0,.6);
+}
+.board-path{position:absolute;inset:1.6cqi;width:calc(100% - 3.2cqi);height:calc(100% - 3.2cqi);pointer-events:none;z-index:1}
+.board-path polyline{fill:none;stroke:#3b2a1a;stroke-opacity:.22;stroke-width:.05;stroke-dasharray:.12 .1;stroke-linecap:round;stroke-linejoin:round}
+
+.cell{
+  position:relative;border-radius:1.2cqi;
+  background:#fbf4e2;color:var(--ink);
+  box-shadow:inset 0 0 0 1px rgba(59,42,26,.15), inset 0 -.4cqi 0 rgba(59,42,26,.08);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.cell:nth-child(even of .cell){background:#f4e8cc}
+.cell .num{position:absolute;top:4%;left:7%;font-size:2.4cqi;font-weight:800;line-height:1;z-index:2}
+.cell .icon{width:56%;height:56%;opacity:.8}
+.cell .label{position:absolute;bottom:4%;left:0;right:0;text-align:center;font-size:1.45cqi;font-weight:700;text-transform:uppercase;letter-spacing:.02em;opacity:.85;z-index:2}
+.cell.goose{background:#dfeccd !important;color:#2f5d3a}
+.cell.bridge{background:#d6e5f0 !important;color:#2b5577}
+.cell.inn{background:#f6dcaa !important;color:#8a5a12}
+.cell.well{background:#c7e0dc !important;color:#1f5c58}
+.cell.maze{background:#e4d7ee !important;color:#5b3d7a}
+.cell.prison{background:#d6d3ce !important;color:#3f3a35}
+.cell.death{background:#3b2a1a !important;color:#f5ecd7}
+.cell.start{background:linear-gradient(135deg,#f3d58a,#c8962e) !important;color:#4a3410}
+.cell.finish{background:radial-gradient(circle,#ffe7a3,#c8962e) !important;color:#4a3410;box-shadow:inset 0 0 0 .5cqi #fff4cf, 0 0 2cqi rgba(255,215,120,.6)}
+.cell.highlight{animation:cellFlash .9s ease}
+@keyframes cellFlash{0%,100%{filter:none}40%{filter:brightness(1.25) saturate(1.3);transform:scale(1.06)}}
+
+.pawns{
+  position:absolute;inset:0;z-index:3;
+  display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:.2cqi;padding:1.5cqi .6cqi .6cqi;
+}
+.pawn{
+  width:3.9cqi;height:3.9cqi;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), transparent 45%), var(--c);
+  border:.4cqi solid #fff;box-shadow:0 .3cqi .6cqi rgba(0,0,0,.45);
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.9cqi;line-height:1;
+  text-shadow:0 1px 1px rgba(0,0,0,.5);
+}
+.pawn.active{outline:.45cqi solid var(--gold);outline-offset:.15cqi;animation:pawnPulse 1.4s ease-in-out infinite;position:relative;z-index:2}
+@keyframes pawnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+.pawn.jump{animation:pawnJump .45s ease}
+@keyframes pawnJump{0%{transform:scale(.4) translateY(-60%)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+.legend{display:flex;flex-wrap:wrap;gap:.4rem .9rem;justify-content:center;max-width:820px;font-size:.85rem;color:var(--ink-soft);padding:0;margin:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:.35rem}
+.legend .chip{width:1.6rem;height:1.6rem;border-radius:6px;display:grid;place-items:center}
+.legend .chip svg{width:1.05rem;height:1.05rem}
+
+/* Panneau latéral */
+.panel{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.panel-box{background:#fffaf0;border-radius:var(--radius);padding:1rem 1.1rem;border:1px solid rgba(59,42,26,.12);box-shadow:0 10px 25px -18px rgba(59,42,26,.5)}
+.panel-box h2{font-size:1.05rem;color:var(--green);margin-bottom:.6rem}
+
+.turn-box{text-align:center;border-top:6px solid var(--current-color, var(--gold))}
+.turn-who{display:flex;align-items:center;justify-content:center;gap:.6rem;font-family:var(--font-display);font-size:1.35rem;font-weight:700}
+.turn-who .pawn{width:1.9rem;height:1.9rem;font-size:.85rem;border-width:3px}
+.turn-hint{font-size:.9rem;color:var(--ink-soft);min-height:1.4em;margin:.3rem 0 .9rem}
+.dice-row{display:flex;justify-content:center;align-items:center;gap:1rem;margin-bottom:.9rem}
+.die{
+  width:64px;height:64px;border-radius:14px;padding:9px;
+  background:linear-gradient(145deg,#fffdf8,#efe3c8);
+  box-shadow:inset 0 -4px 0 rgba(59,42,26,.15), 0 6px 14px -6px rgba(59,42,26,.6);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+}
+.die span{width:11px;height:11px;border-radius:50%;background:var(--ink);place-self:center;opacity:0}
+.die span.on{opacity:1}
+/* Dés lancés sur le plateau : opaques en mouvement, translucides à l'arrêt */
+.dice-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;border-radius:3cqi}
+.dice-layer .die{
+  position:absolute;width:9.5cqi;height:9.5cqi;padding:1.35cqi;border-radius:2cqi;
+  transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(var(--s,1));
+  box-shadow:inset 0 -.6cqi 0 rgba(59,42,26,.18), 0 calc(var(--s,1) * 1.2cqi) calc(var(--s,1) * 2.2cqi) -.6cqi rgba(0,0,0,.55);
+    opacity:.4;transition:opacity .5s ease .5s;will-change:left,top,transform;
+    background:linear-gradient(145deg, color-mix(in srgb, var(--die-c,#f5ecd8) 62%, #fff), var(--die-c,#f5ecd8));
+  }
+  .dice-layer .die span{width:1.75cqi;height:1.75cqi;background:var(--pip,var(--ink))}
+  .dice-layer .die.rolling{opacity:1;transition:opacity .1s ease 0s}
+  /* Brillance lorsqu'un double apparaît */
+  .dice-layer .die::after{
+    content:'';position:absolute;inset:-.5cqi;border-radius:2.5cqi;pointer-events:none;opacity:0;
+    background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.85) 48%, transparent 66%) no-repeat;
+    background-size:250% 100%;
+    box-shadow:0 0 1.6cqi .5cqi rgba(255,246,200,.95), 0 0 4cqi 1.2cqi rgba(255,205,70,.75);
+    transition:opacity .15s ease;
+  }
+  .dice-layer .die.double::after{opacity:1;animation:diceShine 1s ease-in-out infinite}
+  @keyframes diceShine{
+    0%{background-position:120% 0;box-shadow:0 0 1.2cqi .3cqi rgba(255,246,200,.8), 0 0 3cqi .8cqi rgba(255,205,70,.55)}
+    50%{box-shadow:0 0 2.2cqi .8cqi rgba(255,250,220,1), 0 0 5.5cqi 1.8cqi rgba(255,205,70,.9)}
+    100%{background-position:-20% 0;box-shadow:0 0 1.2cqi .3cqi rgba(255,246,200,.8), 0 0 3cqi .8cqi rgba(255,205,70,.55)}
+  }
+  @media (prefers-reduced-motion: reduce){.dice-layer .die.double::after{animation:none}}
+.dice-row .total-label{font-size:.9rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+.dice-total{font-family:var(--font-display);font-size:1.6rem;font-weight:700;min-width:2.5ch;color:var(--red)}
+#roll-btn{width:100%}
+.kbd-hint{font-size:.78rem;color:var(--ink-soft);margin-top:.5rem}
+kbd{background:var(--paper);border:1px solid rgba(59,42,26,.25);border-bottom-width:2px;border-radius:5px;padding:0 .35rem;font-size:.75rem}
+
+.message{
+  padding:.75rem .9rem;border-radius:12px;font-weight:600;font-size:.95rem;
+  background:var(--paper);border-left:5px solid var(--gold);
+}
+.message.good{border-color:var(--green-2);background:#e6efdc}
+.message.bad{border-color:var(--red);background:#f6e1d8}
+.message.special{border-color:#2b5577;background:#dde9f2}
+
+.players-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+.players-list li{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:10px}
+.players-list li.current{background:var(--paper);box-shadow:inset 3px 0 0 var(--gold)}
+.players-list .pawn{width:1.5rem;height:1.5rem;font-size:.7rem;border-width:2px}
+.players-list .pname{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.players-list .ppos{font-variant-numeric:tabular-nums;font-weight:700;font-size:.9rem}
+.status{font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;background:rgba(59,42,26,.1);white-space:nowrap}
+.status.inn{background:#f6dcaa;color:#6e470c}
+.status.well{background:#c7e0dc;color:#1f5c58}
+.status.prison{background:#d6d3ce;color:#3f3a35}
+
+.log{list-style:none;margin:0;padding:0;max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:.3rem;font-size:.86rem}
+.log li{padding:.3rem .5rem;border-radius:8px;border-left:3px solid transparent}
+.log li.good{border-color:var(--green-2)}
+.log li.bad{border-color:var(--red)}
+.log li.special{border-color:#2b5577}
+.log li.roll{color:var(--ink-soft)}
+.log .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+
+/* =========================================================
+   4. DIALOGUES
+   ========================================================= */
+dialog{
+  border:0;border-radius:22px;padding:0;max-width:min(640px, calc(100vw - 2rem));width:100%;
+  background:#fffaf0;color:var(--ink);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+}
+dialog::backdrop{background:rgba(29,56,37,.55);backdrop-filter:blur(3px)}
+.dialog-inner{padding:1.6rem 1.6rem 1.3rem;max-height:calc(100dvh - 4rem);overflow:auto}
+.dialog-inner h2{font-size:1.6rem;color:var(--green);margin-bottom:.8rem}
+.dialog-inner h3{font-size:1.1rem;color:var(--red);margin:1.1rem 0 .4rem}
+.dialog-inner ul{padding-left:1.2rem;margin:.3rem 0}
+.dialog-inner li{margin:.25rem 0}
+.dialog-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.4rem;flex-wrap:wrap}
+.setting-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 0;border-bottom:1px solid rgba(59,42,26,.1)}
+.setting-row label{font-weight:600}
+.setting-row small{display:block;font-weight:400;color:var(--ink-soft)}
+.switch{appearance:none;width:3rem;height:1.7rem;border-radius:999px;background:#cbbd9f;position:relative;cursor:pointer;transition:background .2s;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:calc(1.7rem - 6px);height:calc(1.7rem - 6px);border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.switch:checked{background:var(--green-2)}
+.switch:checked::after{transform:translateX(1.3rem)}
+.switch:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+select{padding:.45rem .7rem;border-radius:10px;border:1.5px solid rgba(59,42,26,.25);background:#fff}
+
+.victory-inner{text-align:center}
+.victory-inner .emblem{background:radial-gradient(circle at 35% 30%, #ffe08a, var(--gold));color:#4a3410}
+.ranking{list-style:none;padding:0;margin:1rem auto 0;max-width:360px;text-align:left}
+.ranking li{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;border-radius:10px}
+.ranking li:first-child{background:#fbefc9;font-weight:800}
+.ranking .rank{width:1.6rem;font-weight:800;color:var(--ink-soft)}
+.ranking .pawn{width:1.5rem;height:1.5rem;border-width:2px;font-size:.7rem}
+.ranking .pname{flex:1}
+.victory-inner .dialog-actions{justify-content:center}
+
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999}
+.confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+
+/* Animations désactivées */
+body.no-anim *, body.no-anim *::before, body.no-anim *::after{animation:none !important;transition:none !important}
+
+/* =========================================================
+   5. RESPONSIVE
+   ========================================================= */
+@media (max-width: 980px){
+  .game-layout{grid-template-columns:1fr;padding:.8rem}
+  .board-frame{width:100%;max-width:640px}
+  .panel{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .panel .turn-box,.panel .message{grid-column:1/-1}
+}
+@media (max-width: 600px){
+  .panel{display:flex}
+  .topbar{padding:.6rem .8rem}
+  .topbar h1{font-size:1.15rem}
+  .topbar .btn-label{display:none}
+  .card{padding:1.4rem}
+  .cell .label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- SVG sprite : icônes du plateau -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-goose" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 3a2.5 2.5 0 0 0-2.5 2.5c0 1 .4 1.8 1 2.6L12.6 11C11 10.4 9.3 10 7.5 10 4.4 10 2 12.2 2 15c0 3.3 3.1 5 7 5h4c4.2 0 7-2.4 7-5.6 0-2-1.1-3.6-2.9-4.6l.9-2.3H20l1.5-1.2L18 5.1A2.5 2.5 0 0 0 15.5 3Zm.4 1.7a.7.7 0 1 1 0 1.4.7.7 0 0 1 0-1.4Z"/></symbol>
+    <symbol id="i-bridge" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 9h20M2 18h20M4 18v-3a8 6 0 0 1 16 0v3M6 9v4.2M10 9v3M14 9v3M18 9v4.2"/></symbol>
+    <symbol id="i-inn" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 9h10v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3zM15 11h2a2.5 2.5 0 0 1 0 5h-2M7 3.5v2.5M10 3v3M13 3.5V6"/></symbol>
+    <symbol id="i-well" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M6 4v7M18 4v7M12 4v4M10 8h4v3h-4zM4 11h16v9H4zM4 15h16"/></symbol>
+    <symbol id="i-maze" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h18v18H3V8M7 3v14h10V7h-6v6h2"/></symbol>
+    <symbol id="i-prison" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 3h16v18H4zM8 3v18M12 3v18M16 3v18M4 10h16"/></symbol>
+    <symbol id="i-death" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a8 8 0 0 0-8 8c0 2.7 1.3 4.6 3 5.7V19a1 1 0 0 0 1 1h1v2h2v-2h2v2h2v-2h1a1 1 0 0 0 1-1v-3.3c1.7-1.1 3-3 3-5.7a8 8 0 0 0-8-8Zm-3 7.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM12 14l1.2 2.2h-2.4L12 14Z"/></symbol>
+    <symbol id="i-start" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 21V4M5 4h12l-2.5 4L17 12H5"/></symbol>
+    <symbol id="i-finish" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3.5 4.5M16 6h3a3 3 0 0 1-3.5 4.5M12 13v4M8.5 20h7"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ ÉCRAN D'ACCUEIL ============ -->
+<section id="screen-home" class="screen active" aria-labelledby="home-title">
+  <div class="center-screen">
+    <div class="card home-card">
+      <div class="emblem" aria-hidden="true"><svg><use href="#i-goose"/></svg></div>
+      <h1 id="home-title">Le Jeu de l’Oie</h1>
+      <p class="tagline">Le grand classique des jeux de société : 63 cases, deux dés, des oies, un pont, un puits… et beaucoup de suspense. De 2 à 6 joueurs.</p>
+      <div class="home-actions">
+        <button class="btn btn-primary btn-lg" id="home-new">Nouvelle partie</button>
+        <button class="btn btn-secondary btn-lg" id="home-resume" hidden>Reprendre la partie</button>
+        <p class="resume-info" id="resume-info" hidden></p>
+        <button class="btn btn-ghost" data-open="rules-dialog">Règles du jeu</button>
+        <button class="btn btn-ghost" data-open="settings-dialog">Paramètres</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONFIGURATION ============ -->
+<section id="screen-setup" class="screen" aria-labelledby="setup-title">
+  <div class="center-screen">
+    <form class="card setup-card" id="setup-form" novalidate>
+      <h2 id="setup-title">Préparer la partie</h2>
+      <p class="muted">Choisissez le nombre de joueurs, leurs noms et la couleur de leur pion.</p>
+
+      <span class="field-label" id="count-label">Nombre de joueurs</span>
+      <div class="segmented" role="group" aria-labelledby="count-label" id="player-count"></div>
+
+      <span class="field-label">Joueurs</span>
+      <div class="player-rows" id="player-rows"></div>
+
+      <div class="setup-actions">
+        <button type="button" class="btn btn-ghost" id="setup-back">Retour</button>
+        <button type="submit" class="btn btn-primary btn-lg">Commencer la partie</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ============ JEU ============ -->
+<section id="screen-game" class="screen">
+  <header class="topbar">
+    <h1><svg aria-hidden="true"><use href="#i-goose"/></svg> Le Jeu de l’Oie</h1>
+    <nav class="topbar-actions" aria-label="Menu du jeu">
+      <button class="btn btn-ghost btn-sm" data-open="rules-dialog"><svg aria-hidden="true"><use href="#i-book"/></svg><span class="btn-label">Règles</span></button>
+      <button class="btn btn-ghost btn-sm" data-open="settings-dialog"><svg aria-hidden="true"><use href="#i-gear"/></svg><span class="btn-label">Paramètres</span></button>
+      <button class="btn btn-ghost btn-sm" id="restart-btn"><svg aria-hidden="true"><use href="#i-restart"/></svg><span class="btn-label">Recommencer</span></button>
+      <button class="btn btn-ghost btn-sm" id="home-btn"><svg aria-hidden="true"><use href="#i-home"/></svg><span class="btn-label">Accueil</span></button>
+    </nav>
+  </header>
+
+  <main class="game-layout">
+    <div class="board-wrap">
+      <div class="board-frame">
+        <div class="board" id="board" role="group" aria-label="Plateau de jeu de 63 cases en spirale"></div>
+        <div class="dice-layer" aria-label="Dés">
+          <div class="die" id="die-1" role="img" aria-label="Dé" style="left:43%;top:57%;--r:-10deg"></div>
+          <div class="die" id="die-2" role="img" aria-label="Dé" style="left:58%;top:52%;--r:14deg"></div>
+        </div>
+      </div>
+      <ul class="legend" id="legend" aria-label="Légende des cases spéciales"></ul>
+    </div>
+
+    <aside class="panel" aria-label="Informations de la partie">
+      <section class="panel-box turn-box" id="turn-box" aria-labelledby="turn-who">
+        <div class="turn-who" id="turn-who"></div>
+        <p class="turn-hint" id="turn-hint"></p>
+        <div class="dice-row">
+          <span class="total-label" aria-hidden="true">Total des dés</span>
+          <span class="dice-total" id="dice-total" aria-label="Total des dés">–</span>
+        </div>
+        <button class="btn btn-primary btn-lg" id="roll-btn">Lancer les dés</button>
+        <p class="kbd-hint">Raccourci : <kbd>Espace</kbd></p>
+      </section>
+
+      <div class="message" id="message" role="status" aria-live="polite">Bienvenue !</div>
+
+      <section class="panel-box" aria-labelledby="players-title">
+        <h2 id="players-title">Joueurs</h2>
+        <ul class="players-list" id="players-list"></ul>
+      </section>
+
+      <section class="panel-box" aria-labelledby="log-title">
+        <h2 id="log-title">Événements récents</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </main>
+</section>
+
+<!-- ============ DIALOGUE : RÈGLES ============ -->
+<dialog id="rules-dialog" aria-labelledby="rules-title">
+  <div class="dialog-inner">
+    <h2 id="rules-title">Règles du jeu</h2>
+    <p>Chaque joueur part de la case <strong>Départ (0)</strong>. À tour de rôle, on lance <strong>deux dés</strong> et on avance son pion du total obtenu. Le premier joueur qui arrive <strong>exactement</strong> sur la case <strong>63</strong> gagne la partie. Plusieurs pions peuvent occuper la même case.</p>
+
+    <h3>Cases spéciales</h3>
+    <ul>
+      <li><strong>Les Oies</strong> (5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59) : vous rejouez le même nombre de cases, dans le même sens. Les oies peuvent s’enchaîner.</li>
+      <li><strong>Le Pont (6)</strong> : vous traversez directement jusqu’à la case 12.</li>
+      <li><strong>L’Auberge (19)</strong> : vous passez 2 tours.</li>
+      <li><strong>Le Puits (31)</strong> : vous restez bloqué jusqu’à ce qu’un autre joueur tombe dans le puits. Il vous délivre et prend votre place ; vous rejouerez normalement depuis la case 31.</li>
+      <li><strong>Le Labyrinthe (42)</strong> : vous vous perdez et retournez à la case 30.</li>
+      <li><strong>La Prison (52)</strong> : vous êtes enfermé. À chaque tour, vous lancez les dés : un <strong>double</strong> vous libère et vous avancez immédiatement du total. Un autre joueur qui arrive en prison vous libère aussi (vous rejouerez normalement au tour suivant).</li>
+      <li><strong>La Mort (58)</strong> : retour à la case 1.</li>
+    </ul>
+
+    <h3>Arrivée et rebond</h3>
+    <p>Il faut tomber pile sur 63. Si le total dépasse l’arrivée, le pion atteint 63 puis <strong>recule</strong> des points restants (ex. : depuis 60, un 7 mène à 63 puis recule jusqu’à 59). Si l’on recule sur une oie, on continue à reculer du même nombre.</p>
+
+    <h3>Variantes retenues</h3>
+    <ul>
+      <li><strong>Lancer depuis le Départ</strong> : un 6+3 envoie directement à la case 26, un 5+4 à la case 53 (règle traditionnelle qui évite une victoire immédiate par enchaînement d’oies).</li>
+      <li>Les effets s’enchaînent jusqu’à ce que le pion s’arrête sur une case ordinaire ; la victoire est vérifiée après résolution de tous les effets.</li>
+      <li>Un double n’offre pas de tour supplémentaire (sauf pour sortir de prison).</li>
+      <li>Pas d’échange de place lorsqu’on rejoint un autre pion : les cases peuvent être partagées.</li>
+    </ul>
+    <div class="dialog-actions">
+      <button class="btn btn-primary" data-close>J’ai compris</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ============ DIALOGUE : PARAMÈTRES ============ -->
+<dialog id="settings-dialog" aria-labelledby="settings-title">
+  <div class="dialog-inner">
+    <h2 id="settings-title">Paramètres</h2>
+    <div class="setting-row">
+      <label for="opt-sound">Sons<small>Bruitages des dés, des pas et des événements.</small></label>
+      <input type="checkbox" class="switch" id="opt-sound">
+    </div>
+    <div class="setting-row">
+      <label for="opt-anim">Animations<small>Déplacements case par case et lancer animé.</small></label>
+      <input type="checkbox" class="switch" id="opt-anim">
+    </div>
+    <div class="setting-row">
+      <label for="opt-speed">Vitesse des pions<small>Utilisée lorsque les animations sont actives.</small></label>
+      <select id="opt-speed">
+        <option value="slow">Lente</option>
+        <option value="normal">Normale</option>
+        <option value="fast">Rapide</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <span><strong>Sauvegarde</strong><small id="save-status">La partie est enregistrée automatiquement sur cet appareil.</small></span>
+      <button class="btn btn-ghost btn-sm" id="clear-save">Effacer</button>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn btn-primary" data-close>Fermer</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ============ DIALOGUE : CONFIRMATION ============ -->
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <div class="dialog-inner">
+    <h2 id="confirm-title">Confirmer</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost" id="confirm-no">Annuler</button>
+      <button class="btn btn-primary" id="confirm-yes">Confirmer</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ============ DIALOGUE : VICTOIRE ============ -->
+<dialog id="victory-dialog" aria-labelledby="victory-title">
+  <div class="dialog-inner victory-inner">
+    <div class="emblem" aria-hidden="true"><svg><use href="#i-finish"/></svg></div>
+    <h2 id="victory-title">Victoire !</h2>
+    <p id="victory-text"></p>
+    <ol class="ranking" id="ranking"></ol>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost" id="victory-home">Accueil</button>
+      <button class="btn btn-secondary" id="victory-setup">Nouveaux joueurs</button>
+      <button class="btn btn-primary" id="victory-replay">Rejouer</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+
+/* =========================================================
+   1. RÈGLES & CONSTANTES
+   ========================================================= */
+const FINAL_CELL = 63;
+const GRID = 8; // 8x8 = 64 cases : Départ (0) + 63 cases
+const GEESE = new Set([5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54, 59]);
+const INN_TURNS = 2;
+
+const SPECIAL_CELLS = {
+  6:  { type: 'bridge', name: 'Le Pont', short: 'Pont', target: 12, desc: 'Traversez le pont jusqu’à la case 12.' },
+  19: { type: 'inn',    name: 'L’Auberge', short: 'Auberge', desc: 'Passez 2 tours.' },
+  31: { type: 'well',   name: 'Le Puits', short: 'Puits', desc: 'Bloqué jusqu’à ce qu’un autre joueur vous délivre.' },
+  42: { type: 'maze',   name: 'Le Labyrinthe', short: 'Labyr.', target: 30, desc: 'Retournez à la case 30.' },
+  52: { type: 'prison', name: 'La Prison', short: 'Prison', desc: 'Sortez avec un double ou si un autre joueur vous remplace.' },
+  58: { type: 'death',  name: 'La Mort', short: 'Mort', target: 1, desc: 'Retour à la case 1.' },
+};
+
+/** Combinaisons traditionnelles lors d'un lancer depuis le Départ. */
+function startThrowTarget(a, b) {
+  const key = [a, b].sort().join('-');
+  if (key === '3-6') return 26;
+  if (key === '4-5') return 53;
+  return null;
+}
+
+const ICON_BY_TYPE = {
+  start: 'i-start', finish: 'i-finish', goose: 'i-goose', bridge: 'i-bridge',
+  inn: 'i-inn', well: 'i-well', maze: 'i-maze', prison: 'i-prison', death: 'i-death',
+};
+
+function getCellInfo(n) {
+  if (n === 0) return { type: 'start', name: 'Départ', short: 'Départ', desc: 'Point de départ de tous les pions.' };
+  if (n === FINAL_CELL) return { type: 'finish', name: 'Arrivée', short: 'Arrivée', desc: 'Atteignez cette case exactement pour gagner.' };
+  if (SPECIAL_CELLS[n]) return SPECIAL_CELLS[n];
+  if (GEESE.has(n)) return { type: 'goose', name: 'Oie', short: '', desc: 'Rejouez le même nombre de cases.' };
+  return { type: 'normal', name: '', short: '', desc: '' };
+}
+
+const PLAYER_COLORS = [
+  { id: 'red',    hex: '#c0392b', label: 'Rouge' },
+  { id: 'blue',   hex: '#2563eb', label: 'Bleu' },
+  { id: 'green',  hex: '#15803d', label: 'Vert' },
+  { id: 'yellow', hex: '#d49b00', label: 'Jaune' },
+  { id: 'purple', hex: '#7e3fbf', label: 'Violet' },
+  { id: 'slate',  hex: '#334155', label: 'Ardoise' },
+];
+
+const STORAGE_GAME = 'jeuDeLOie.save.v1';
+const STORAGE_SETTINGS = 'jeuDeLOie.settings.v1';
+
+/* =========================================================
+   2. UTILITAIRES
+   ========================================================= */
+const $ = (sel) => document.querySelector(sel);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function rollDie() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return (buf[0] % 6) + 1;
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* =========================================================
+   3. PARAMÈTRES
+   ========================================================= */
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const settings = { sound: true, animations: !prefersReducedMotion, speed: 'normal' };
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || 'null');
+    if (saved && typeof saved === 'object') {
+      if (typeof saved.sound === 'boolean') settings.sound = saved.sound;
+      if (typeof saved.animations === 'boolean') settings.animations = saved.animations;
+      if (['slow', 'normal', 'fast'].includes(saved.speed)) settings.speed = saved.speed;
+    }
+  } catch { /* stockage indisponible : on garde les valeurs par défaut */ }
+  applySettings();
+}
+function saveSettings() {
+  try { localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings)); } catch {}
+}
+function applySettings() {
+  document.body.classList.toggle('no-anim', !settings.animations);
+  $('#opt-sound').checked = settings.sound;
+  $('#opt-anim').checked = settings.animations;
+  $('#opt-speed').value = settings.speed;
+}
+const Timing = {
+  step()  { return settings.animations ? { slow: 320, normal: 190, fast: 100 }[settings.speed] : 0; },
+  pause() { return settings.animations ? 650 : 120; },
+  skip()  { return settings.animations ? 1100 : 500; },
+};
+
+/* =========================================================
+   4. SONS (Web Audio, aucun fichier externe)
+   ========================================================= */
+const Sound = {
+  ctx: null,
+  ensure() {
+    if (!this.ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      this.ctx = new Ctx();
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+  tone(freq, dur = 0.08, type = 'sine', vol = 0.12, delay = 0) {
+    if (!settings.sound) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const t = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  },
+  dice()    { for (let i = 0; i < 6; i++) this.tone(180 + Math.random() * 260, 0.035, 'square', 0.04, i * 0.07); },
+  step()    { this.tone(720, 0.04, 'triangle', 0.06); },
+  special() { this.tone(523, 0.12, 'triangle', 0.12); this.tone(784, 0.18, 'triangle', 0.12, 0.12); },
+  bad()     { this.tone(320, 0.2, 'sawtooth', 0.06); this.tone(210, 0.3, 'sawtooth', 0.06, 0.18); },
+  good()    { this.tone(660, 0.1, 'sine', 0.12); this.tone(880, 0.16, 'sine', 0.12, 0.1); },
+  win()     { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.13, i * 0.14)); },
+};
+
+/* =========================================================
+   5. ÉTAT DE LA PARTIE & SAUVEGARDE
+   ========================================================= */
+let game = null;      // état complet de la partie (sérialisable)
+let busy = false;     // vrai pendant un lancer / déplacement / tour passé
+let sessionId = 0;    // invalide les tâches asynchrones d'une partie abandonnée
+
+function createGame(playerConfigs) {
+  return {
+    players: playerConfigs.map((cfg, i) => ({
+      id: i, name: cfg.name, color: cfg.color,
+      pos: 0, skip: 0, trapped: null, // trapped : null | 'well' | 'prison'
+    })),
+    current: 0,
+    round: 1,
+    over: false,
+    winnerId: null,
+    lastDice: null,
+    log: [],
+  };
+}
+const currentPlayer = () => game.players[game.current];
+
+function saveGame() {
+  if (!game || game.over) return;
+  try { localStorage.setItem(STORAGE_GAME, JSON.stringify(game)); } catch {}
+}
+function clearSave() {
+  try { localStorage.removeItem(STORAGE_GAME); } catch {}
+}
+function loadSavedGame() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_GAME) || 'null');
+    const valid = data && Array.isArray(data.players) && data.players.length >= 2 && data.players.length <= 6 &&
+      data.players.every((p) => Number.isInteger(p.pos) && p.pos >= 0 && p.pos <= FINAL_CELL && typeof p.name === 'string') &&
+      Number.isInteger(data.current) && data.current >= 0 && data.current < data.players.length && !data.over;
+    return valid ? data : null;
+  } catch { return null; }
+}
+
+/* =========================================================
+   6. JOURNAL & MESSAGES
+   ========================================================= */
+function addLog(text, kind = 'info', player = null) {
+  game.log.unshift({ text, kind, color: player ? player.color : null });
+  if (game.log.length > 80) game.log.length = 80;
+  renderLog();
+  if (kind !== 'roll') setMessage(text, kind);
+}
+function setMessage(text, kind = 'info') {
+  const el = $('#message');
+  el.textContent = text;
+  el.className = 'message ' + kind;
+}
+
+/* =========================================================
+   7. LOGIQUE DES DÉPLACEMENTS
+   ========================================================= */
+
+/** Avance case par case ; rebondit sur l'arrivée. Retourne le sens final (+1 / -1). */
+async function moveSteps(player, steps, direction) {
+  let dir = direction;
+  let bounced = false;
+  for (let i = 0; i < steps; i++) {
+    if (dir === 1 && player.pos >= FINAL_CELL) { dir = -1; bounced = true; }
+    if (dir === -1 && player.pos <= 0) break;
+    player.pos += dir;
+    if (Timing.step() > 0) {
+      renderPawns();
+      Sound.step();
+      await sleep(Timing.step());
+    }
+  }
+  renderPawns();
+  renderPlayers();
+  if (bounced) {
+    addLog(`${player.name} dépasse l’arrivée et rebondit jusqu’à la case ${player.pos}.`, 'bad', player);
+    Sound.bad();
+    await sleep(Timing.pause());
+  }
+  return dir;
+}
+
+/** Déplacement direct (pont, labyrinthe, mort). */
+async function teleport(player, target) {
+  await sleep(Timing.pause());
+  player.pos = target;
+  renderPawns(player.id);
+  renderPlayers();
+  flashCell(target);
+  await sleep(Timing.pause());
+}
+
+/** Délivre les autres joueurs coincés sur la même case piège. */
+function releaseTrappedOthers(arriving, trapType) {
+  game.players
+    .filter((o) => o !== arriving && o.trapped === trapType)
+    .forEach((o) => {
+      o.trapped = null;
+      const where = trapType === 'well' ? 'du puits' : 'de prison';
+      addLog(`${arriving.name} délivre ${o.name} ${where} et prend sa place.`, 'good', o);
+    });
+}
+
+/** Applique en chaîne les effets de la case d'arrivée. */
+async function resolveLanding(player, total, direction) {
+  let dir = direction;
+  for (let guard = 0; guard < 40; guard++) {
+    const n = player.pos;
+    const info = getCellInfo(n);
+    flashCell(n);
+
+    if (n === FINAL_CELL) return;
+
+    switch (info.type) {
+      case 'goose':
+        addLog(`Oie (case ${n}) ! ${player.name} ${dir === 1 ? 'avance' : 'recule'} encore de ${total} cases.`, 'special', player);
+        Sound.special();
+        await sleep(Timing.pause());
+        dir = await moveSteps(player, total, dir);
+        continue;
+      case 'bridge':
+        addLog(`${player.name} emprunte le pont et file à la case ${info.target}.`, 'special', player);
+        Sound.special();
+        await teleport(player, info.target);
+        continue;
+      case 'maze':
+        addLog(`${player.name} se perd dans le labyrinthe et retourne à la case ${info.target}.`, 'bad', player);
+        Sound.bad();
+        await teleport(player, info.target);
+        continue;
+      case 'death':
+        addLog(`La Mort ! ${player.name} retourne à la case ${info.target}.`, 'bad', player);
+        Sound.bad();
+        await teleport(player, info.target);
+        continue;
+      case 'inn':
+        player.skip = INN_TURNS;
+        addLog(`${player.name} s’arrête à l’auberge et passera ${INN_TURNS} tours.`, 'bad', player);
+        Sound.bad();
+        return;
+      case 'well':
+        releaseTrappedOthers(player, 'well');
+        player.trapped = 'well';
+        addLog(`${player.name} tombe dans le puits ! Il faudra qu’un autre joueur vienne le délivrer.`, 'bad', player);
+        Sound.bad();
+        return;
+      case 'prison':
+        releaseTrappedOthers(player, 'prison');
+        player.trapped = 'prison';
+        addLog(`${player.name} est jeté en prison ! Un double sera nécessaire pour s’évader.`, 'bad', player);
+        Sound.bad();
+        return;
+      default:
+        return;
+    }
+  }
+}
+
+/* =========================================================
+   8. DÉROULEMENT DES TOURS
+   ========================================================= */
+function throwDiceOnBoard(dice, finals) {
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const clamp = (v) => Math.min(84, Math.max(16, v));
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  const side = Math.floor(Math.random() * 4);
+  const tx = rand(32, 62), ty = rand(32, 62);
+  const angle = Math.random() * Math.PI * 2, gap = rand(13, 18);
+  const targets = [
+    { x: tx, y: ty },
+    { x: clamp(tx + Math.cos(angle) * gap), y: clamp(ty + Math.sin(angle) * gap) },
+  ];
+
+  const tracks = dice.map((el, i) => {
+    const along = rand(20, 80) + i * 8;
+    const start = [
+      { x: along, y: 114 }, { x: -14, y: along }, { x: along, y: -14 }, { x: 114, y: along },
+    ][side];
+    const spin = (Math.random() < 0.5 ? -1 : 1) * rand(620, 1080);
+    const endRot = rand(-22, 22);
+    return {
+      el, start, target: targets[i], final: finals[i],
+      startRot: endRot - spin, spin, endRot,
+      duration: rand(1350, 1650) + i * 120, nextFace: 0,
+    };
+  });
+
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    dice.forEach((el) => el.classList.add('rolling'));
+    function frame(now) {
+      let running = false;
+      for (const k of tracks) {
+        const t = Math.min(1, (now - t0) / k.duration);
+        const p = easeOut(t);
+        const rot = k.startRot + k.spin * p;
+        const bounce = 1 + 0.38 * Math.abs(Math.sin(t * Math.PI * 3.2)) * Math.pow(1 - t, 1.4);
+        k.el.style.left = k.start.x + (k.target.x - k.start.x) * p + '%';
+        k.el.style.top = k.start.y + (k.target.y - k.start.y) * p + '%';
+        k.el.style.setProperty('--r', rot + 'deg');
+        k.el.style.setProperty('--s', bounce.toFixed(3));
+        const travelled = Math.abs(rot - k.startRot);
+        if (t > 0.88) {
+          renderDie(k.el, k.final);
+        } else if (travelled >= k.nextFace) {
+          renderDie(k.el, rollDie());
+          k.nextFace = travelled + 75;
+        }
+        if (t < 1) running = true;
+        else k.el.classList.remove('rolling');
+      }
+      updateDoubleGlow();
+      if (running) requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+async function rollDice() {
+  const d1 = $('#die-1'), d2 = $('#die-2');
+  const a = rollDie(), b = rollDie();
+  setDiceColor(currentPlayer().color);
+  Sound.dice();
+  if (settings.animations) {
+    $('#dice-total').textContent = '…';
+    await throwDiceOnBoard([d1, d2], [a, b]);
+  }
+  game.lastDice = [a, b];
+  renderDice();
+  return [a, b];
+}
+
+async function handleRoll() {
+  if (busy || !game || game.over) return;
+  const sid = sessionId;
+  setBusy(true);
+  const player = currentPlayer();
+
+  const [a, b] = await rollDice();
+  if (sid !== sessionId) return;
+  const total = a + b;
+  const isDouble = a === b;
+  addLog(`${player.name} lance ${a} + ${b} = ${total}${isDouble ? ' (double)' : ''}.`, 'roll', player);
+
+  if (player.trapped === 'prison') {
+    if (!isDouble) {
+      setMessage(`Pas de double : ${player.name} reste en prison.`, 'bad');
+      Sound.bad();
+      await sleep(Timing.pause());
+      return finishTurn(sid);
+    }
+    player.trapped = null;
+    addLog(`Double ! ${player.name} s’évade de prison et avance de ${total} cases.`, 'good', player);
+    Sound.good();
+    await sleep(Timing.pause());
+  }
+
+  let dir = 1;
+  const startTarget = player.pos === 0 ? startThrowTarget(a, b) : null;
+  if (startTarget) {
+    addLog(`Lancer de départ ${a}+${b} : ${player.name} file directement à la case ${startTarget} !`, 'special', player);
+    Sound.special();
+    await moveSteps(player, startTarget, 1);
+  } else {
+    dir = await moveSteps(player, total, 1);
+  }
+  if (sid !== sessionId) return;
+
+  await resolveLanding(player, total, dir);
+  if (sid !== sessionId) return;
+  await finishTurn(sid);
+}
+
+/** Termine le tour : vérifie la victoire puis passe au joueur suivant. */
+async function finishTurn(sid) {
+  if (sid !== sessionId) return;
+  const player = currentPlayer();
+  if (player.pos === FINAL_CELL) return declareWinner(player);
+
+  game.current = (game.current + 1) % game.players.length;
+  if (game.current === 0) game.round++;
+  saveGame();
+  renderAll();
+  await beginTurn(sid);
+}
+
+/** Début de tour : gère automatiquement les tours passés (auberge, puits). */
+async function beginTurn(sid) {
+  if (sid !== sessionId || game.over) return;
+  const player = currentPlayer();
+
+  if (player.skip > 0) {
+    setBusy(true);
+    player.skip--;
+    const rest = player.skip > 0 ? `encore ${player.skip} tour à passer` : 'il repartira au prochain tour';
+    addLog(`${player.name} se repose à l’auberge et passe son tour (${rest}).`, 'info', player);
+    renderPlayers();
+    await sleep(Timing.skip());
+    return finishTurn(sid);
+  }
+  if (player.trapped === 'well') {
+    setBusy(true);
+    addLog(`${player.name} attend au fond du puits et passe son tour.`, 'info', player);
+    await sleep(Timing.skip());
+    return finishTurn(sid);
+  }
+
+  setBusy(false);
+  setMessage(player.trapped === 'prison'
+    ? `${player.name} est en prison : faites un double pour sortir.`
+    : `À ${player.name} de lancer les dés.`, 'info');
+}
+
+function declareWinner(player) {
+  game.over = true;
+  game.winnerId = player.id;
+  addLog(`${player.name} atteint la case 63 et remporte la partie !`, 'good', player);
+  clearSave();
+  setBusy(true);
+  renderAll();
+  Sound.win();
+  showVictory(player);
+}
+
+function startNewGame(playerConfigs) {
+  sessionId++;
+  game = createGame(playerConfigs);
+  addLog(`La partie commence ! ${game.players.map((p) => p.name).join(', ')} sont sur la ligne de départ.`, 'info');
+  showScreen('game');
+  saveGame();
+  renderAll();
+  beginTurn(sessionId);
+}
+
+function resumeGame(saved) {
+  sessionId++;
+  game = saved;
+  showScreen('game');
+  renderAll();
+  addLog('Partie reprise.', 'info');
+  beginTurn(sessionId);
+}
+
+function quitToHome() {
+  sessionId++;
+  busy = false;
+  showScreen('home');
+}
+
+/* =========================================================
+   9. AFFICHAGE
+   ========================================================= */
+/** Coordonnées en spirale (départ en bas à gauche, arrivée au centre). */
+function computeSpiral(size) {
+  const coords = [];
+  let top = 0, bottom = size - 1, left = 0, right = size - 1;
+  while (top <= bottom && left <= right) {
+    for (let c = left; c <= right; c++) coords.push([bottom, c]);
+    bottom--;
+    for (let r = bottom; r >= top; r--) coords.push([r, right]);
+    right--;
+    if (top <= bottom) { for (let c = right; c >= left; c--) coords.push([top, c]); top++; }
+    if (left <= right) { for (let r = top; r <= bottom; r++) coords.push([r, left]); left++; }
+  }
+  return coords;
+}
+const SPIRAL = computeSpiral(GRID);
+
+function buildBoard() {
+  const board = $('#board');
+  board.innerHTML = '';
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('class', 'board-path');
+  svg.setAttribute('viewBox', `0 0 ${GRID} ${GRID}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  const line = document.createElementNS(svgNS, 'polyline');
+  line.setAttribute('points', SPIRAL.map(([r, c]) => `${c + 0.5},${r + 0.5}`).join(' '));
+  svg.appendChild(line);
+  board.appendChild(svg);
+
+  for (let n = 0; n <= FINAL_CELL; n++) {
+    const [r, c] = SPIRAL[n];
+    const info = getCellInfo(n);
+    const cell = document.createElement('div');
+    cell.className = `cell ${info.type}`;
+    cell.id = `cell-${n}`;
+    cell.style.gridRow = r + 1;
+    cell.style.gridColumn = c + 1;
+    const label = info.name ? `Case ${n}, ${info.name}. ${info.desc}` : `Case ${n}`;
+    cell.setAttribute('aria-label', label);
+    cell.title = label;
+    const icon = ICON_BY_TYPE[info.type];
+    cell.innerHTML = `
+      <span class="num" aria-hidden="true">${n === 0 ? '' : n}</span>
+      ${icon ? `<svg class="icon" aria-hidden="true"><use href="#${icon}"/></svg>` : ''}
+      ${info.short ? `<span class="label" aria-hidden="true">${info.short}</span>` : ''}
+      <div class="pawns"></div>`;
+    board.appendChild(cell);
+  }
+}
+
+function buildLegend() {
+  const items = [
+    ['goose', 'Oie : rejouez'], ['bridge', 'Pont : 6 → 12'], ['inn', 'Auberge : 2 tours'],
+    ['well', 'Puits : attendre'], ['maze', 'Labyrinthe : → 30'], ['prison', 'Prison : double'],
+    ['death', 'Mort : → 1'], ['finish', 'Arrivée : 63 pile'],
+  ];
+  $('#legend').innerHTML = items.map(([type, text]) =>
+    `<li><span class="chip cell ${type}" aria-hidden="true"><svg><use href="#${ICON_BY_TYPE[type]}"/></svg></span>${text}</li>`
+  ).join('');
+}
+
+function pawnHtml(player, extraClass = '') {
+  return `<span class="pawn ${extraClass}" style="--c:${player.color}" aria-hidden="true">${player.id + 1}</span>`;
+}
+
+function renderPawns(jumpId = null) {
+  document.querySelectorAll('.pawns').forEach((el) => (el.innerHTML = ''));
+  const current = game.over ? null : currentPlayer();
+  game.players.forEach((p) => {
+    const container = document.querySelector(`#cell-${p.pos} .pawns`);
+    if (!container) return;
+    const classes = [p === current ? 'active' : '', p.id === jumpId ? 'jump' : ''].join(' ');
+    container.insertAdjacentHTML('beforeend', pawnHtml(p, classes));
+  });
+}
+
+function flashCell(n) {
+  if (!settings.animations) return;
+  const cell = $(`#cell-${n}`);
+  if (!cell || getCellInfo(n).type === 'normal') return;
+  cell.classList.remove('highlight');
+  void cell.offsetWidth;
+  cell.classList.add('highlight');
+}
+
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function renderDie(el, value) {
+  if (!el.children.length) el.innerHTML = '<span></span>'.repeat(9);
+  [...el.children].forEach((pip, i) => pip.classList.toggle('on', !!value && PIPS[value].includes(i)));
+  el.setAttribute('aria-label', value ? `Dé : ${value}` : 'Dé non lancé');
+  el.dataset.face = value || '';
+}
+function updateDoubleGlow() {
+  const d1 = $('#die-1'), d2 = $('#die-2');
+  const isDouble = !!d1.dataset.face && d1.dataset.face === d2.dataset.face;
+  d1.classList.toggle('double', isDouble);
+  d2.classList.toggle('double', isDouble);
+}
+function setDiceColor(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const pip = (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#2a1e12' : '#ffffff';
+  [$('#die-1'), $('#die-2')].forEach((el) => {
+    el.style.setProperty('--die-c', hex);
+    el.style.setProperty('--pip', pip);
+  });
+}
+function renderDice() {
+  const [a, b] = game.lastDice || [null, null];
+  if (!game.lastDice || !$('#die-1').style.getPropertyValue('--die-c')) setDiceColor(currentPlayer().color);
+  renderDie($('#die-1'), a);
+  renderDie($('#die-2'), b);
+  updateDoubleGlow();
+  $('#dice-total').textContent = a ? a + b : '–';
+}
+
+function statusOf(p) {
+  if (p.trapped === 'well') return '<span class="status well">Puits</span>';
+  if (p.trapped === 'prison') return '<span class="status prison">Prison</span>';
+  if (p.skip > 0) return `<span class="status inn">Auberge · ${p.skip}</span>`;
+  return '';
+}
+
+function renderPlayers() {
+  const current = game.over ? null : currentPlayer();
+  $('#players-list').innerHTML = game.players.map((p) => `
+    <li class="${p === current ? 'current' : ''}" ${p === current ? 'aria-current="true"' : ''}>
+      ${pawnHtml(p)}
+      <span class="pname">${escapeHtml(p.name)}</span>
+      ${statusOf(p)}
+      <span class="ppos">${p.pos === 0 ? 'Départ' : 'Case ' + p.pos}</span>
+    </li>`).join('');
+}
+
+function renderTurn() {
+  const box = $('#turn-box');
+  const btn = $('#roll-btn');
+  if (game.over) {
+    const w = game.players[game.winnerId];
+    box.style.setProperty('--current-color', w.color);
+    $('#turn-who').innerHTML = `${pawnHtml(w)}<span>${escapeHtml(w.name)} a gagné !</span>`;
+    $('#turn-hint').textContent = `Partie terminée au tour ${game.round}.`;
+    btn.textContent = 'Partie terminée';
+    return;
+  }
+  const p = currentPlayer();
+  box.style.setProperty('--current-color', p.color);
+  $('#turn-who').innerHTML = `${pawnHtml(p)}<span>${escapeHtml(p.name)}</span>`;
+  let hint = `Tour ${game.round} · ${p.pos === 0 ? 'sur la case Départ' : 'case ' + p.pos}`;
+  if (p.trapped === 'prison') hint = 'En prison : un double pour sortir';
+  else if (p.trapped === 'well') hint = 'Au fond du puits…';
+  else if (p.skip > 0) hint = 'Se repose à l’auberge…';
+  $('#turn-hint').textContent = hint;
+  btn.textContent = p.trapped === 'prison' ? 'Tenter un double' : 'Lancer les dés';
+}
+
+function renderLog() {
+  $('#log').innerHTML = game.log.map((e) =>
+    `<li class="${e.kind}">${e.color ? `<span class="dot" style="background:${e.color}" aria-hidden="true"></span>` : ''}${escapeHtml(e.text)}</li>`
+  ).join('');
+}
+
+function setBusy(value) {
+  busy = value;
+  updateControls();
+}
+function updateControls() {
+  const locked = busy || !game || game.over;
+  $('#roll-btn').disabled = locked;
+  $('#restart-btn').disabled = busy && !(game && game.over);
+  $('#home-btn').disabled = busy && !(game && game.over);
+}
+
+function renderAll() {
+  renderPawns();
+  renderPlayers();
+  renderTurn();
+  renderDice();
+  renderLog();
+  updateControls();
+}
+
+/* =========================================================
+   10. ÉCRANS, CONFIGURATION ET DIALOGUES
+   ========================================================= */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  $(`#screen-${name}`).classList.add('active');
+  if (name === 'home') refreshHome();
+  window.scrollTo(0, 0);
+}
+
+function refreshHome() {
+  const saved = loadSavedGame();
+  $('#home-resume').hidden = !saved;
+  const info = $('#resume-info');
+  info.hidden = !saved;
+  if (saved) info.textContent = `Tour ${saved.round} · ${saved.players.map((p) => p.name).join(', ')}`;
+}
+
+/* --- Configuration des joueurs --- */
+const setup = {
+  count: 2,
+  players: PLAYER_COLORS.map((c, i) => ({ name: `Joueur ${i + 1}`, color: c.hex })),
+};
+
+function renderSetup() {
+  $('#player-count').innerHTML = [2, 3, 4, 5, 6].map((n) =>
+    `<button type="button" data-count="${n}" aria-pressed="${n === setup.count}" aria-label="${n} joueurs">${n}</button>`
+  ).join('');
+
+  $('#player-rows').innerHTML = setup.players.slice(0, setup.count).map((p, i) => `
+    <div class="player-row">
+      <span class="pawn pawn-preview" style="--c:${p.color}" aria-hidden="true">${i + 1}</span>
+      <div>
+        <label class="sr-only" for="pname-${i}">Nom du joueur ${i + 1}</label>
+        <input id="pname-${i}" data-index="${i}" maxlength="16" value="${escapeHtml(p.name)}" autocomplete="off">
+      </div>
+      <div class="swatches" role="radiogroup" aria-label="Couleur du joueur ${i + 1}">
+        ${PLAYER_COLORS.map((c) => `
+          <button type="button" class="swatch" role="radio" style="--c:${c.hex}"
+            aria-checked="${c.hex === p.color}" aria-label="${c.label}"
+            data-index="${i}" data-color="${c.hex}"></button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function chooseColor(index, color) {
+  // Les couleurs restent uniques : on échange avec le joueur qui la possède déjà.
+  const owner = setup.players.findIndex((p, i) => i !== index && p.color === color);
+  if (owner !== -1) setup.players[owner].color = setup.players[index].color;
+  setup.players[index].color = color;
+  renderSetup();
+  const btn = document.querySelector(`.swatch[data-index="${index}"][data-color="${color}"]`);
+  if (btn) btn.focus();
+}
+
+$('#player-count').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-count]');
+  if (!btn) return;
+  setup.count = Number(btn.dataset.count);
+  renderSetup();
+});
+$('#player-rows').addEventListener('click', (e) => {
+  const sw = e.target.closest('.swatch');
+  if (sw) chooseColor(Number(sw.dataset.index), sw.dataset.color);
+});
+$('#player-rows').addEventListener('input', (e) => {
+  if (!e.target.matches('input[data-index]')) return;
+  const i = Number(e.target.dataset.index);
+  setup.players[i].name = e.target.value;
+});
+$('#setup-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  Sound.ensure();
+  const configs = setup.players.slice(0, setup.count).map((p, i) => ({
+    name: p.name.trim().slice(0, 16) || `Joueur ${i + 1}`,
+    color: p.color,
+  }));
+  startNewGame(configs);
+});
+$('#setup-back').addEventListener('click', () => showScreen('home'));
+
+/* --- Accueil --- */
+$('#home-new').addEventListener('click', () => {
+  const saved = loadSavedGame();
+  const go = () => { renderSetup(); showScreen('setup'); };
+  if (saved) {
+    confirmAction('Une partie est en cours. Commencer une nouvelle partie effacera la sauvegarde.', 'Nouvelle partie')
+      .then((ok) => { if (ok) { clearSave(); go(); } });
+  } else go();
+});
+$('#home-resume').addEventListener('click', () => {
+  const saved = loadSavedGame();
+  if (saved) { Sound.ensure(); resumeGame(saved); }
+  else refreshHome();
+});
+
+/* --- Barre du jeu --- */
+$('#roll-btn').addEventListener('click', handleRoll);
+$('#restart-btn').addEventListener('click', async () => {
+  if (busy && !game.over) return;
+  const ok = await confirmAction('Recommencer la partie avec les mêmes joueurs ? La progression actuelle sera perdue.', 'Recommencer');
+  if (ok) startNewGame(game.players.map((p) => ({ name: p.name, color: p.color })));
+});
+$('#home-btn').addEventListener('click', () => {
+  if (busy && !game.over) return;
+  quitToHome(); // la partie reste sauvegardée et peut être reprise
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' && e.key !== ' ') return;
+  if (!$('#screen-game').classList.contains('active')) return;
+  if (document.querySelector('dialog[open]')) return;
+  if (e.target.closest('input, select, textarea, button')) return;
+  e.preventDefault();
+  handleRoll();
+});
+
+/* --- Dialogues --- */
+document.querySelectorAll('[data-open]').forEach((btn) =>
+  btn.addEventListener('click', () => $('#' + btn.dataset.open).showModal()));
+document.querySelectorAll('dialog [data-close]').forEach((btn) =>
+  btn.addEventListener('click', () => btn.closest('dialog').close()));
+document.querySelectorAll('dialog').forEach((dlg) =>
+  dlg.addEventListener('click', (e) => { if (e.target === dlg && dlg.id !== 'victory-dialog') dlg.close(); }));
+
+function confirmAction(text, confirmLabel = 'Confirmer') {
+  const dlg = $('#confirm-dialog');
+  $('#confirm-text').textContent = text;
+  $('#confirm-yes').textContent = confirmLabel;
+  dlg.returnValue = '';
+  dlg.showModal();
+  return new Promise((resolve) => {
+    const finish = (val) => { cleanup(); dlg.close(); resolve(val); };
+    const yes = () => finish(true);
+    const no = () => finish(false);
+    const onClose = () => { cleanup(); resolve(false); };
+    function cleanup() {
+      $('#confirm-yes').removeEventListener('click', yes);
+      $('#confirm-no').removeEventListener('click', no);
+      dlg.removeEventListener('close', onClose);
+    }
+    $('#confirm-yes').addEventListener('click', yes);
+    $('#confirm-no').addEventListener('click', no);
+    dlg.addEventListener('close', onClose);
+  });
+}
+
+/* --- Paramètres --- */
+$('#opt-sound').addEventListener('change', (e) => { settings.sound = e.target.checked; saveSettings(); if (settings.sound) Sound.good(); });
+$('#opt-anim').addEventListener('change', (e) => { settings.animations = e.target.checked; applySettings(); saveSettings(); });
+$('#opt-speed').addEventListener('change', (e) => { settings.speed = e.target.value; saveSettings(); });
+$('#clear-save').addEventListener('click', () => {
+  clearSave();
+  $('#save-status').textContent = 'Sauvegarde effacée. Une nouvelle sauvegarde sera créée au prochain tour joué.';
+  refreshHome();
+});
+
+/* --- Victoire --- */
+function showVictory(winner) {
+  const ranking = [...game.players].sort((a, b) => (b.id === winner.id) - (a.id === winner.id) || b.pos - a.pos);
+  $('#victory-title').textContent = `${winner.name} gagne !`;
+  $('#victory-text').textContent = `Arrivé pile sur la case 63 au tour ${game.round}. Bravo !`;
+  $('#ranking').innerHTML = ranking.map((p, i) => `
+    <li><span class="rank">${i + 1}.</span>${pawnHtml(p)}<span class="pname">${escapeHtml(p.name)}</span>
+    <span>${p.pos === FINAL_CELL ? 'Arrivée' : p.pos === 0 ? 'Départ' : 'Case ' + p.pos}</span></li>`).join('');
+  setTimeout(() => {
+    $('#victory-dialog').showModal();
+    launchConfetti();
+  }, Timing.pause());
+}
+function launchConfetti() {
+  if (!settings.animations) return;
+  const box = document.createElement('div');
+  box.className = 'confetti';
+  const colors = ['#c0392b', '#c8962e', '#2f5d3a', '#2563eb', '#f5ecd7'];
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('i');
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDuration = 2 + Math.random() * 2.5 + 's';
+    piece.style.animationDelay = Math.random() * 0.8 + 's';
+    box.appendChild(piece);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 5500);
+}
+$('#victory-replay').addEventListener('click', () => {
+  $('#victory-dialog').close();
+  startNewGame(game.players.map((p) => ({ name: p.name, color: p.color })));
+});
+$('#victory-setup').addEventListener('click', () => {
+  $('#victory-dialog').close();
+  game.players.forEach((p, i) => { setup.players[i].name = p.name; setup.players[i].color = p.color; });
+  const unused = PLAYER_COLORS.map((c) => c.hex).filter((hex) => !game.players.some((p) => p.color === hex));
+  for (let i = game.players.length; i < setup.players.length; i++) setup.players[i].color = unused.shift();
+  setup.count = game.players.length;
+  renderSetup();
+  showScreen('setup');
+});
+$('#victory-home').addEventListener('click', () => { $('#victory-dialog').close(); quitToHome(); });
+
+/* =========================================================
+   11. INITIALISATION
+   ========================================================= */
+loadSettings();
+buildBoard();
+buildLegend();
+renderSetup();
+refreshHome();
+</script>
+</body>
+</html>
