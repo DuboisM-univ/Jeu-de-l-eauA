@@ -37,6 +37,6 @@ surtout ne change absolument rien dans le code qui touche au fonctionnement du j
 
 ne change rien d'autre que ça: rajoute un cours délai de 0.5 secondes avant de rendre les dés transparents. En plus, modifie la couleur des dés en fonction de la couleur sélectionée du joueur les lançeants. Exemple: si le joueur 1 est en jaune et lance les dés, les dés doivent être en jaune. Enfin, rajoute un effet de brillance aux dés lorsque les deux dés affichent le même chiffre en même temps: lors qu'un double apparaît.
 
-## _prompt 4:_
+## _prompt 4 (Non ajouté au code final):_
 
 maintenant ajoute la fonctionnalité d'avoir des cartes d'action; modifie le code afin que quelques cases sur le plateau permettent aux joueurs de tirer une carte d'action aléatoire lors qu'ils tombent dessus. Les cartes d'actions font plusieurs évènements que les joueurs ont la possibilité d'activer tel que: -Avancer de 5 cases supplémentaires -faire reculer tout les joueurs de 2 cases sans activer les effets des cases que les joueurs tombent sur. Invente plusieurs effets d'action funs permettant de rendre la partie un peu plus chaotique.
